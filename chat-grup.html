@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grup Chat Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            height: 85vh;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        /* Login Scene */
+        #loginScene {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 30px;
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-align: center;
+        }
+
+        #loginScene h1 {
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #loginScene input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        #loginScene input:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        #loginScene button {
+            width: 100%;
+            padding: 15px;
+            background-color: white;
+            color: #4facfe;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #loginScene button:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #bannedMessage {
+            display: none;
+            background-color: rgba(255, 77, 79, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Chat Scene */
+        #chatScene {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-header .user-info .avatar {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tools-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .tools-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .tools-menu {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            display: none;
+            z-index: 100;
+            min-width: 180px;
+        }
+
+        .tools-menu button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 5px;
+            background-color: #f8f9fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .tools-menu button:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, #f5f7fa, #e4e8f0);
+            background-attachment: fixed;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.sent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.received {
+            background-color: white;
+            border-bottom-left-radius: 5px;
+            color: #333;
+        }
+
+        .message .sender {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        .message .text {
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .message .time {
+            font-size: 11px;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .message .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message.sent:hover .delete-btn {
+            display: flex;
+        }
+
+        .message.deleted {
+            background-color: #f1f3f5;
+            color: #868e96;
+            font-style: italic;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #e9ecef;
+            border-radius: 25px;
+            margin-right: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            background: white;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .chat-input button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-input button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .logout-button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .logout-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px);
+            opacity: 0;
+            animation: modalAppear 0.3s ease forwards;
+        }
+
+        @keyframes modalAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .modal input, .modal select, .modal textarea {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .modal input:focus, .modal select:focus, .modal textarea:focus {
+            outline: none;
+            background: white;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .modal-buttons .cancel {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+
+        .modal-buttons .cancel:hover {
+            background-color: #e9ecef;
+        }
+
+        .modal-buttons .confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-buttons .confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                height: 95vh;
+                max-width: 100%;
+                border-radius: 0;
+            }
+            
+            body {
+                padding: 0;
+                background: white;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Kode HTML lainnya tetap sama -->
+    <div class="container">
+        <!-- Login Scene -->
+        <div id="loginScene">
+            <h1>Grup Chat Online</h1>
+            <input type="text" id="usernameInput" placeholder="Masukkan nama Anda">
+            <button id="loginButton">Masuk ke Grup</button>
+            <div id="bannedMessage">
+                <p>Anda Terbanned oleh Taher🚫</p>
+            </div>
+        </div>
+
+        <!-- Chat Scene -->
+        <div id="chatScene">
+            <div class="chat-header">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar"></div>
+                    <span id="currentUsername"></span>
+                </div>
+                <div class="header-buttons">
+                    <button class="tools-button" id="toolsButton">Tools</button>
+                    <button class="logout-button" id="logoutButton">Logout</button>
+                </div>
+            </div>
+
+            <div class="tools-menu" id="toolsMenu">
+                <button id="deleteOthersBtn">Hapus Pesan Orang Lain</button>
+                <button id="banUserBtn">Banned User</button>
+                <button id="warnUserBtn">Berikan Peringatan</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <!-- Pesan akan ditampilkan di sini -->
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Ketik pesan...">
+                <button id="sendButton">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Tools -->
+    <div class="modal" id="deleteMessageModal">
+        <div class="modal-content">
+            <h2>Hapus Pesan</h2>
+            <p>Pilih pesan yang ingin dihapus:</p>
+            <div id="messageList"></div>
+            <div class="modal-buttons">
+                <button class="cancel" id="cancelDelete">Batal</button>
+                <button class="confirm" id="confirmDelete">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="banUserModal">
+        <div class="modal-content">
+            <h2>Banned User</h2>
+            <input type="text" id="userToBan" placeholder="Nama user yang akan dibanned">
+            <input type="number" id="banDuration" placeholder="Durasi banned (menit)" value="60">
+            <div class="modal-buttons">
+                <button class="cancel" id="cancelBan">Batal</button>
+                <button class="confirm" id="confirmBan">Banned</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="warnUserModal">
+        <div class="modal-content">
+            <h2>Berikan Peringatan</h2>
+            <input type="text" id="userToWarn" placeholder="Nama user yang akan diperingatkan">
+            <textarea id="warningMessage" placeholder="Pesan peringatan"></textarea>
+            <div class="modal-buttons">
+                <button class="cancel" id="cancelWarn">Batal</button>
+                <button class="confirm" id="confirmWarn">Kirim Peringatan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script>
+        // JavaScript code remains the same as in your original file
+        // Konfigurasi Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQobSSWqAnctUFiGjf4RNMWueo3SV_fMY",
+            authDomain: "taher-my-id.firebaseapp.com",
+            databaseURL: "https://taher-my-id-default-rtdb.firebaseio.com",
+            projectId: "taher-my-id",
+            storageBucket: "taher-my-id.firebasestorage.app",
+            messagingSenderId: "844154238987",
+            appId: "1:844154238987:web:7f7bb48c3c4a89f9442f0e",
+            measurementId: "G-MPK8W5SB88"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Referensi database
+        const messagesRef = database.ref('messages');
+        const usersRef = database.ref('users');
+        const bannedUsersRef = database.ref('bannedUsers');
+
+        // Variabel global
+        let currentUser = null;
+        let isTaherUser = false;
+        let bannedUsers = {};
+
+        // Kata terlarang
+        const forbiddenWords = ['Tuti', 'Udin', 'Haer', 'Tut', 'Adam'];
+
+        // Event Listeners
+        document.getElementById('loginButton').addEventListener('click', login);
+        document.getElementById('logoutButton').addEventListener('click', logout);
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Tools functionality
+        document.getElementById('toolsButton').addEventListener('click', toggleToolsMenu);
+        document.getElementById('deleteOthersBtn').addEventListener('click', showDeleteMessageModal);
+        document.getElementById('banUserBtn').addEventListener('click', showBanUserModal);
+        document.getElementById('warnUserBtn').addEventListener('click', showWarnUserModal);
+
+        // Modal buttons
+        document.getElementById('cancelDelete').addEventListener('click', () => document.getElementById('deleteMessageModal').style.display = 'none');
+        document.getElementById('confirmDelete').addEventListener('click', deleteSelectedMessage);
+        document.getElementById('cancelBan').addEventListener('click', () => document.getElementById('banUserModal').style.display = 'none');
+        document.getElementById('confirmBan').addEventListener('click', banUser);
+        document.getElementById('cancelWarn').addEventListener('click', () => document.getElementById('warnUserModal').style.display = 'none');
+        document.getElementById('confirmWarn').addEventListener('click', warnUser);
+
+        // Fungsi untuk toggle menu tools
+        function toggleToolsMenu() {
+            const toolsMenu = document.getElementById('toolsMenu');
+            toolsMenu.style.display = toolsMenu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Fungsi login
+        function login() {
+            const username = document.getElementById('usernameInput').value.trim();
+            
+            if (!username) {
+                alert('Masukkan nama terlebih dahulu!');
+                return;
+            }
+
+            // Cek apakah user dibanned
+            checkIfBanned(username).then(isBanned => {
+                if (isBanned) {
+                    document.getElementById('bannedMessage').style.display = 'block';
+                    return;
+                }
+
+                currentUser = username;
+                isTaherUser = username.toLowerCase().includes('taher');
+                
+                // Simpan data user
+                const userData = {
+                    name: username,
+                    loginTime: Date.now(),
+                    deviceInfo: navigator.userAgent
+                };
+                
+                usersRef.child(username).set(userData);
+                
+                // Tampilkan scene chat
+                document.getElementById('loginScene').style.display = 'none';
+                document.getElementById('chatScene').style.display = 'flex';
+                document.getElementById('currentUsername').textContent = username;
+                document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
+                
+                // Tampilkan atau sembunyikan tombol tools berdasarkan user
+                if (isTaherUser) {
+                    document.getElementById('toolsButton').style.display = 'block';
+                } else {
+                    document.getElementById('toolsButton').style.display = 'none';
+                }
+                
+                // Load pesan
+                loadMessages();
+            });
+        }
+
+        // Fungsi logout
+        function logout() {
+            currentUser = null;
+            isTaherUser = false;
+            
+            document.getElementById('chatScene').style.display = 'none';
+            document.getElementById('loginScene').style.display = 'flex';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('bannedMessage').style.display = 'none';
+        }
+
+        // Fungsi kirim pesan
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const messageText = messageInput.value.trim();
+            
+            if (!messageText) return;
+            
+            // Cek kata terlarang
+            if (containsForbiddenWords(messageText) && !isTaherUser) {
+                // User melanggar aturan, banned
+                banUserAutomatically(currentUser);
+                return;
+            }
+            
+            // Simpan pesan ke Firebase
+            const messageData = {
+                text: messageText,
+                sender: currentUser,
+                timestamp: Date.now(),
+                id: generateMessageId()
+            };
+            
+            messagesRef.push(messageData);
+            
+            // Kosongkan input
+            messageInput.value = '';
+        }
+
+        // Fungsi load pesan
+        function loadMessages() {
+            messagesRef.on('value', snapshot => {
+                const messages = snapshot.val();
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                
+                if (!messages) return;
+                
+                Object.values(messages).forEach(message => {
+                    if (!message.deleted || (message.deleted && message.sender === currentUser)) {
+                        displayMessage(message);
+                    }
+                });
+                
+                // Scroll ke bawah
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+
+        // Fungsi tampilkan pesan
+        function displayMessage(message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            
+            messageDiv.className = `message ${message.sender === currentUser ? 'sent' : 'received'}`;
+            if (message.deleted) {
+                messageDiv.classList.add('deleted');
+            }
+            
+            messageDiv.dataset.id = message.id;
+            
+            let messageContent = '';
+            
+            if (message.deleted) {
+                messageContent = `
+                    <div class="text">Pesan telah dihapus</div>
+                    <div class="time">${formatTime(message.timestamp)}</div>
+                `;
+            } else {
+                messageContent = `
+                    <div class="sender">${message.sender}</div>
+                    <div class="text">${message.text}</div>
+                    <div class="time">${formatTime(message.timestamp)}</div>
+                `;
+                
+                // Tambahkan tombol hapus untuk pesan yang dikirim oleh user saat ini
+                if (message.sender === currentUser) {
+                    messageContent += `<button class="delete-btn" onclick="deleteMessage('${message.id}')">×</button>`;
+                }
+            }
+            
+            messageDiv.innerHTML = messageContent;
+            chatMessages.appendChild(messageDiv);
+        }
+
+        // Fungsi hapus pesan sendiri
+        function deleteMessage(messageId) {
+            // Cari pesan dengan ID tersebut
+            messagesRef.once('value', snapshot => {
+                const messages = snapshot.val();
+                
+                Object.keys(messages).forEach(key => {
+                    if (messages[key].id === messageId && messages[key].sender === currentUser) {
+                        // Tandai sebagai dihapus
+                        messagesRef.child(key).update({ deleted: true });
+                    }
+                });
+            });
+        }
+
+        // Fungsi cek kata terlarang
+        function containsForbiddenWords(text) {
+            const lowerText = text.toLowerCase();
+            return forbiddenWords.some(word => lowerText.includes(word.toLowerCase()));
+        }
+
+        // Fungsi banned otomatis
+        function banUserAutomatically(username) {
+            const banData = {
+                username: username,
+                bannedBy: 'System',
+                reason: 'Menggunakan kata terlarang',
+                timestamp: Date.now(),
+                unbannedAt: Date.now() + (60 * 60 * 1000) // 1 jam
+            };
+            
+            bannedUsersRef.child(username).set(banData);
+            
+            // Tampilkan pesan banned dan logout
+            document.getElementById('bannedMessage').style.display = 'block';
+            logout();
+        }
+
+        // Fungsi cek apakah user dibanned
+        function checkIfBanned(username) {
+            return bannedUsersRef.child(username).once('value').then(snapshot => {
+                const banData = snapshot.val();
+                
+                if (!banData) return false;
+                
+                // Cek apakah banned sudah berakhir
+                if (banData.unbannedAt && Date.now() > banData.unbannedAt) {
+                    // Hapus dari banned
+                    bannedUsersRef.child(username).remove();
+                    return false;
+                }
+                
+                return true;
+            });
+        }
+
+        // Fungsi untuk modal hapus pesan orang lain
+        function showDeleteMessageModal() {
+            const modal = document.getElementById('deleteMessageModal');
+            const messageList = document.getElementById('messageList');
+            messageList.innerHTML = '';
+            
+            // Ambil semua pesan
+            messagesRef.once('value', snapshot => {
+                const messages = snapshot.val();
+                
+                if (!messages) return;
+                
+                Object.values(messages).forEach(message => {
+                    if (!message.deleted) {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'message-item';
+                        messageDiv.innerHTML = `
+                            <input type="radio" name="selectedMessage" value="${message.id}">
+                            <span><strong>${message.sender}:</strong> ${message.text}</span>
+                        `;
+                        messageList.appendChild(messageDiv);
+                    }
+                });
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        // Fungsi hapus pesan yang dipilih
+        function deleteSelectedMessage() {
+            const selectedMessage = document.querySelector('input[name="selectedMessage"]:checked');
+            
+            if (!selectedMessage) {
+                alert('Pilih pesan yang akan dihapus!');
+                return;
+            }
+            
+            const messageId = selectedMessage.value;
+            
+            // Cari dan hapus pesan
+            messagesRef.once('value', snapshot => {
+                const messages = snapshot.val();
+                
+                Object.keys(messages).forEach(key => {
+                    if (messages[key].id === messageId) {
+                        messagesRef.child(key).update({ deleted: true });
+                    }
+                });
+            });
+            
+            document.getElementById('deleteMessageModal').style.display = 'none';
+        }
+
+        // Fungsi untuk modal banned user
+        function showBanUserModal() {
+            document.getElementById('banUserModal').style.display = 'flex';
+        }
+
+        // Fungsi banned user
+        function banUser() {
+            const username = document.getElementById('userToBan').value.trim();
+            const duration = parseInt(document.getElementById('banDuration').value) || 60;
+            
+            if (!username) {
+                alert('Masukkan nama user!');
+                return;
+            }
+            
+            const banData = {
+                username: username,
+                bannedBy: currentUser,
+                reason: 'Tanpa alasan',
+                timestamp: Date.now(),
+                unbannedAt: Date.now() + (duration * 60 * 1000) // Durasi dalam menit
+            };
+            
+            bannedUsersRef.child(username).set(banData);
+            
+            // Kirim pesan sistem
+            const systemMessage = {
+                text: `User ${username} telah dibanned oleh ${currentUser} selama ${duration} menit.`,
+                sender: 'System',
+                timestamp: Date.now(),
+                id: generateMessageId()
+            };
+            
+            messagesRef.push(systemMessage);
+            
+            document.getElementById('banUserModal').style.display = 'none';
+            document.getElementById('userToBan').value = '';
+            document.getElementById('banDuration').value = '60';
+        }
+
+        // Fungsi untuk modal peringatan user
+        function showWarnUserModal() {
+            document.getElementById('warnUserModal').style.display = 'flex';
+        }
+
+        // Fungsi berikan peringatan
+        function warnUser() {
+            const username = document.getElementById('userToWarn').value.trim();
+            const warning = document.getElementById('warningMessage').value.trim();
+            
+            if (!username || !warning) {
+                alert('Isi semua field!');
+                return;
+            }
+            
+            // Kirim pesan peringatan
+            const warningMessage = {
+                text: `PERINGATAN untuk ${username}: ${warning}`,
+                sender: 'System',
+                timestamp: Date.now(),
+                id: generateMessageId()
+            };
+            
+            messagesRef.push(warningMessage);
+            
+            document.getElementById('warnUserModal').style.display = 'none';
+            document.getElementById('userToWarn').value = '';
+            document.getElementById('warningMessage').value = '';
+        }
+
+        // Fungsi utilitas
+        function generateMessageId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load daftar banned users
+            bannedUsersRef.on('value', snapshot => {
+                bannedUsers = snapshot.val() || {};
+            });
+        });
+    </script>
+</body>
+</html>
