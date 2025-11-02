@@ -93,6 +93,16 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
+        #quickLoginButton {
+            margin-top: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        #quickLoginButton:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
         #bannedMessage {
             display: none;
             background-color: rgba(255, 77, 79, 0.9);
@@ -271,6 +281,60 @@
             font-style: italic;
         }
 
+        /* File message styles */
+        .file-message {
+            margin-top: 5px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        .file-message img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .file-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .file-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .file-name {
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: inherit;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         .chat-input {
             display: flex;
             padding: 15px;
@@ -296,7 +360,28 @@
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
         }
 
-        .chat-input button {
+        .file-upload-button {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-right: 10px;
+        }
+
+        .file-upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .send-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
@@ -311,7 +396,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .chat-input button:hover {
+        .send-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
@@ -464,15 +549,15 @@
     </style>
 </head>
 <body>
-    <!-- Kode HTML lainnya tetap sama -->
     <div class="container">
         <!-- Login Scene -->
         <div id="loginScene">
             <h1>Grup Chat Online</h1>
             <input type="text" id="usernameInput" placeholder="Masukkan nama Anda">
             <button id="loginButton">Masuk ke Grup</button>
+            <button id="quickLoginButton" style="display: none;">Login sebagai <span id="lastUsername"></span></button>
             <div id="bannedMessage">
-                <p>Anda Terbanned oleh Taher🚫</p>
+                <p>Anda Dibanned oleh Taher🚫</p>
             </div>
         </div>
 
@@ -490,9 +575,9 @@
             </div>
 
             <div class="tools-menu" id="toolsMenu">
-                <button id="deleteOthersBtn">Hapus Pesan Orang Lain</button>
-                <button id="banUserBtn">Banned User</button>
-                <button id="warnUserBtn">Berikan Peringatan</button>
+                <button id="deleteOthersBtn">Hapus Pesan lain</button>
+                <button id="banUserBtn">Ban User</button>
+                <button id="warnUserBtn">kirim Peringatan</button>
             </div>
 
             <div class="chat-messages" id="chatMessages">
@@ -500,8 +585,10 @@
             </div>
 
             <div class="chat-input">
+                <input type="file" id="fileInput" style="display: none;" accept="image/*, audio/*, video/*, .pdf, .doc, .docx .html, .text, .mpl, ">
+                <button class="file-upload-button" id="fileUploadButton">📎</button>
                 <input type="text" id="messageInput" placeholder="Ketik pesan...">
-                <button id="sendButton">➤</button>
+                <button class="send-button" id="sendButton">➤</button>
             </div>
         </div>
     </div>
@@ -546,8 +633,8 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script>
-        // JavaScript code remains the same as in your original file
         // Konfigurasi Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAQobSSWqAnctUFiGjf4RNMWueo3SV_fMY",
@@ -563,6 +650,7 @@
         // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const storage = firebase.storage();
 
         // Referensi database
         const messagesRef = database.ref('messages');
@@ -590,6 +678,15 @@
         document.getElementById('deleteOthersBtn').addEventListener('click', showDeleteMessageModal);
         document.getElementById('banUserBtn').addEventListener('click', showBanUserModal);
         document.getElementById('warnUserBtn').addEventListener('click', showWarnUserModal);
+
+        // File upload functionality
+        document.getElementById('fileUploadButton').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+        // Quick login functionality
+        document.getElementById('quickLoginButton').addEventListener('click', quickLogin);
 
         // Modal buttons
         document.getElementById('cancelDelete').addEventListener('click', () => document.getElementById('deleteMessageModal').style.display = 'none');
@@ -633,6 +730,9 @@
                 
                 usersRef.child(username).set(userData);
                 
+                // Simpan data login di localStorage
+                localStorage.setItem('lastUsername', username);
+                
                 // Tampilkan scene chat
                 document.getElementById('loginScene').style.display = 'none';
                 document.getElementById('chatScene').style.display = 'flex';
@@ -649,6 +749,15 @@
                 // Load pesan
                 loadMessages();
             });
+        }
+
+        // Fungsi login cepat
+        function quickLogin() {
+            const lastUsername = localStorage.getItem('lastUsername');
+            if (lastUsername) {
+                document.getElementById('usernameInput').value = lastUsername;
+                login();
+            }
         }
 
         // Fungsi logout
@@ -681,13 +790,64 @@
                 text: messageText,
                 sender: currentUser,
                 timestamp: Date.now(),
-                id: generateMessageId()
+                id: generateMessageId(),
+                type: 'text'
             };
             
             messagesRef.push(messageData);
             
             // Kosongkan input
             messageInput.value = '';
+        }
+
+        // Fungsi handle upload file
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validasi ukuran file (maksimal 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Ukuran file terlalu besar. Maksimal 10MB.');
+                return;
+            }
+
+            // Tampilkan indikator upload
+            const messageInput = document.getElementById('messageInput');
+            messageInput.placeholder = 'Mengunggah file...';
+            messageInput.disabled = true;
+
+            // Upload file ke Firebase Storage
+            const storageRef = storage.ref();
+            const fileRef = storageRef.child('chat_files/' + Date.now() + '_' + file.name);
+            
+            fileRef.put(file).then((snapshot) => {
+                // Dapatkan URL file
+                return snapshot.ref.getDownloadURL();
+            }).then((downloadURL) => {
+                // Simpan pesan file ke Firebase
+                const messageData = {
+                    fileURL: downloadURL,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    sender: currentUser,
+                    timestamp: Date.now(),
+                    id: generateMessageId(),
+                    type: 'file'
+                };
+                
+                messagesRef.push(messageData);
+                
+                // Reset input file dan input teks
+                document.getElementById('fileInput').value = '';
+                messageInput.placeholder = 'Ketik pesan...';
+                messageInput.disabled = false;
+            }).catch((error) => {
+                console.error('Error uploading file:', error);
+                alert('Gagal mengunggah file. Silakan coba lagi.');
+                messageInput.placeholder = 'Ketik pesan...';
+                messageInput.disabled = false;
+            });
         }
 
         // Fungsi load pesan
@@ -730,15 +890,50 @@
                     <div class="time">${formatTime(message.timestamp)}</div>
                 `;
             } else {
-                messageContent = `
-                    <div class="sender">${message.sender}</div>
-                    <div class="text">${message.text}</div>
-                    <div class="time">${formatTime(message.timestamp)}</div>
-                `;
+                if (message.type === 'file') {
+                    // Tampilkan pesan file
+                    const fileSize = formatFileSize(message.fileSize);
+                    let fileIcon = '📄';
+                    
+                    // Tentukan ikon berdasarkan tipe file
+                    if (message.fileType.startsWith('image/')) {
+                        fileIcon = '🖼️';
+                    } else if (message.fileType.startsWith('audio/')) {
+                        fileIcon = '🎵';
+                    } else if (message.fileType.startsWith('video/')) {
+                        fileIcon = '🎥';
+                    }
+                    
+                    messageContent = `
+                        <div class="sender">${message.sender}</div>
+                        <div class="file-message">
+                            <div class="file-icon">${fileIcon}</div>
+                            <div class="file-info">
+                                <div class="file-name">${message.fileName}</div>
+                                <div class="file-size">${fileSize}</div>
+                            </div>
+                            <a href="${message.fileURL}" target="_blank" class="download-btn">Unduh</a>
+                        </div>
+                    `;
+                    
+                    // Jika file adalah gambar, tampilkan preview
+                    if (message.fileType.startsWith('image/')) {
+                        messageContent += `<img src="${message.fileURL}" alt="${message.fileName}" style="max-width: 100%; border-radius: 8px; margin-top: 5px;">`;
+                    }
+                    
+                    messageContent += `<div class="time">${formatTime(message.timestamp)}</div>`;
+                } else {
+                    // Tampilkan pesan teks biasa
+                    messageContent = `
+                        <div class="sender">${message.sender}</div>
+                        <div class="text">${message.text}</div>
+                        <div class="time">${formatTime(message.timestamp)}</div>
+                    `;
+                }
                 
                 // Tambahkan tombol hapus untuk pesan yang dikirim oleh user saat ini
                 if (message.sender === currentUser) {
-                    messageContent += `<button class="delete-btn" onclick="deleteMessage('${message.id}')">×</button>`;
+                    messageContent += `<button class="delete-btn" onclick="deleteMessage('${message.id}')">Hapus</button>`;
                 }
             }
             
@@ -820,7 +1015,7 @@
                         messageDiv.className = 'message-item';
                         messageDiv.innerHTML = `
                             <input type="radio" name="selectedMessage" value="${message.id}">
-                            <span><strong>${message.sender}:</strong> ${message.text}</span>
+                            <span><strong>${message.sender}:</strong> ${message.type === 'file' ? '📎 ' + message.fileName : message.text}</span>
                         `;
                         messageList.appendChild(messageDiv);
                     }
@@ -885,7 +1080,8 @@
                 text: `User ${username} telah dibanned oleh ${currentUser} selama ${duration} menit.`,
                 sender: 'System',
                 timestamp: Date.now(),
-                id: generateMessageId()
+                id: generateMessageId(),
+                type: 'text'
             };
             
             messagesRef.push(systemMessage);
@@ -915,7 +1111,8 @@
                 text: `PERINGATAN untuk ${username}: ${warning}`,
                 sender: 'System',
                 timestamp: Date.now(),
-                id: generateMessageId()
+                id: generateMessageId(),
+                type: 'text'
             };
             
             messagesRef.push(warningMessage);
@@ -935,12 +1132,25 @@
             return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         }
 
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
         // Inisialisasi
         document.addEventListener('DOMContentLoaded', () => {
             // Load daftar banned users
             bannedUsersRef.on('value', snapshot => {
                 bannedUsers = snapshot.val() || {};
             });
+
+            // Cek apakah ada data login sebelumnya
+            const lastUsername = localStorage.getItem('lastUsername');
+            if (lastUsername) {
+                document.getElementById('quickLoginButton').style.display = 'block';
+                document.getElementById('lastUsername').textContent = lastUsername;
+            }
         });
     </script>
 </body>
