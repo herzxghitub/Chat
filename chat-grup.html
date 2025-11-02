@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grup Chat Online</title>
     <style>
-        /* CSS yang sama seperti sebelumnya... */
-         <style>
         * {
             margin: 0;
             padding: 0;
@@ -419,6 +417,30 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
+        /* Upload Status */
+        .upload-status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .upload-status.uploading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .upload-status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .upload-status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -548,45 +570,6 @@
                 max-width: 85%;
             }
         }
-   
-        /* Tambahan style untuk indikator upload */
-        .upload-indicator {
-            display: none;
-            padding: 10px;
-            background: #e3f2fd;
-            border-radius: 10px;
-            margin: 10px 0;
-            text-align: center;
-            font-size: 14px;
-            color: #1976d2;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-        
-        .progress {
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        
-        .upload-cancel {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 5px;
-            font-size: 12px;
-        }
     </style>
 </head>
 <body>
@@ -623,13 +606,6 @@
 
             <div class="chat-messages" id="chatMessages">
                 <!-- Pesan akan ditampilkan di sini -->
-                <div class="upload-indicator" id="uploadIndicator">
-                    <div>Mengunggah file...</div>
-                    <div class="progress-bar">
-                        <div class="progress" id="uploadProgress"></div>
-                    </div>
-                    <button class="upload-cancel" id="cancelUpload">Batalkan</button>
-                </div>
             </div>
 
             <div class="chat-input">
@@ -683,13 +659,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script>
-        // Konfigurasi Firebase
+        // KONFIGURASI FIREBASE - DENGAN STORAGE BUCKET YANG BENAR
         const firebaseConfig = {
             apiKey: "AIzaSyAQobSSWqAnctUFiGjf4RNMWueo3SV_fMY",
             authDomain: "taher-my-id.firebaseapp.com",
             databaseURL: "https://taher-my-id-default-rtdb.firebaseio.com",
             projectId: "taher-my-id",
-            storageBucket: "taher-my-id.firebasestorage.app",
+            // PERHATIAN: Ganti storageBucket dengan yang benar dari Firebase Console
+            // Biasanya formatnya: projectId.appspot.com
+            storageBucket: "taher-my-id.appspot.com", // <- INI YANG HARUS DIPERBAIKI
             messagingSenderId: "844154238987",
             appId: "1:844154238987:web:7f7bb48c3c4a89f9442f0e",
             measurementId: "G-MPK8W5SB88"
@@ -709,7 +687,6 @@
         let currentUser = null;
         let isTaherUser = false;
         let bannedUsers = {};
-        let currentUploadTask = null;
 
         // Kata terlarang
         const forbiddenWords = ['Tuti', 'Udin', 'Haer', 'Tut', 'Adam'];
@@ -733,7 +710,6 @@
             document.getElementById('fileInput').click();
         });
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
-        document.getElementById('cancelUpload').addEventListener('click', cancelUpload);
 
         // Quick login functionality
         document.getElementById('quickLoginButton').addEventListener('click', quickLogin);
@@ -850,81 +826,116 @@
             messageInput.value = '';
         }
 
-        // Fungsi handle upload file
+        // FUNGSI UPLOAD FILE YANG SUDAH DIPERBAIKI
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            console.log('Memulai upload file:', file.name, 'tipe:', file.type, 'ukuran:', file.size);
+
             // Validasi ukuran file (maksimal 10MB)
             if (file.size > 10 * 1024 * 1024) {
-                alert('Ukuran file terlalu besar. Maksimal 10MB.');
+                alert('Ukuran file terlalu besar. Maksimal 10MB. Ukuran file: ' + (file.size/1024/1024).toFixed(2) + ' MB');
                 return;
             }
 
-            // Tampilkan indikator upload
-            document.getElementById('uploadIndicator').style.display = 'block';
-            document.getElementById('uploadProgress').style.width = '0%';
+            // Tampilkan status upload
+            showUploadStatus('Mengunggah file ' + file.name + '...', 'uploading');
             
             // Upload file ke Firebase Storage
             const storageRef = storage.ref();
             const fileRef = storageRef.child('chat_files/' + Date.now() + '_' + file.name);
             
-            // Mulai upload dengan progress tracking
-            currentUploadTask = fileRef.put(file);
-            
-            currentUploadTask.on('state_changed',
-                // Progress observer
-                (snapshot) => {
-                    // Update progress bar
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    document.getElementById('uploadProgress').style.width = progress + '%';
-                },
-                // Error observer
-                (error) => {
-                    console.error('Error uploading file:', error);
-                    alert('Gagal mengunggah file. Silakan coba lagi.');
-                    resetUploadIndicator();
-                },
-                // Complete observer
-                () => {
+            // Tambahkan metadata untuk contentType
+            const metadata = {
+                contentType: file.type || 'application/octet-stream'
+            };
+
+            console.log('Metadata upload:', metadata);
+            console.log('File reference path:', fileRef.fullPath);
+
+            // Upload file dengan metadata
+            fileRef.put(file, metadata)
+                .then((snapshot) => {
+                    console.log('Upload berhasil, snapshot:', snapshot);
+                    
                     // Dapatkan URL file
-                    currentUploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        // Simpan pesan file ke Firebase
-                        const messageData = {
-                            fileURL: downloadURL,
-                            fileName: file.name,
-                            fileType: file.type,
-                            fileSize: file.size,
-                            sender: currentUser,
-                            timestamp: Date.now(),
-                            id: generateMessageId(),
-                            type: 'file'
-                        };
-                        
-                        messagesRef.push(messageData);
-                        
-                        // Reset input file dan indikator
-                        document.getElementById('fileInput').value = '';
-                        resetUploadIndicator();
-                    });
-                }
-            );
+                    return snapshot.ref.getDownloadURL();
+                })
+                .then((downloadURL) => {
+                    console.log('Download URL:', downloadURL);
+                    
+                    // Simpan pesan file ke Firebase
+                    const messageData = {
+                        fileURL: downloadURL,
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileSize: file.size,
+                        sender: currentUser,
+                        timestamp: Date.now(),
+                        id: generateMessageId(),
+                        type: 'file'
+                    };
+                    
+                    messagesRef.push(messageData);
+                    
+                    // Reset input file
+                    document.getElementById('fileInput').value = '';
+                    
+                    // Tampilkan status sukses
+                    showUploadStatus('File ' + file.name + ' berhasil diunggah!', 'success');
+                    
+                    // Hapus status setelah 3 detik
+                    setTimeout(() => {
+                        hideUploadStatus();
+                    }, 3000);
+                })
+                .catch((error) => {
+                    console.error('Error uploading file:', error);
+                    console.error('Error code:', error.code);
+                    console.error('Error message:', error.message);
+                    
+                    // Tampilkan status error dengan detail
+                    let errorMessage = 'Gagal mengunggah file';
+                    if (error.code) {
+                        errorMessage += ' (' + error.code + ')';
+                    }
+                    if (error.message) {
+                        errorMessage += ': ' + error.message;
+                    }
+                    
+                    showUploadStatus(errorMessage, 'error');
+                    
+                    // Hapus status setelah 5 detik
+                    setTimeout(() => {
+                        hideUploadStatus();
+                    }, 5000);
+                });
         }
 
-        // Fungsi batalkan upload
-        function cancelUpload() {
-            if (currentUploadTask) {
-                currentUploadTask.cancel();
-                resetUploadIndicator();
-                alert('Upload dibatalkan');
+        // Fungsi untuk menampilkan status upload
+        function showUploadStatus(message, type) {
+            // Hapus status sebelumnya jika ada
+            hideUploadStatus();
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `upload-status ${type}`;
+            statusDiv.id = 'uploadStatus';
+            statusDiv.textContent = message;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.appendChild(statusDiv);
+            
+            // Scroll ke bawah untuk melihat status
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Fungsi untuk menyembunyikan status upload
+        function hideUploadStatus() {
+            const existingStatus = document.getElementById('uploadStatus');
+            if (existingStatus) {
+                existingStatus.remove();
             }
-        }
-
-        // Fungsi reset indikator upload
-        function resetUploadIndicator() {
-            document.getElementById('uploadIndicator').style.display = 'none';
-            document.getElementById('uploadProgress').style.width = '0%';
-            currentUploadTask = null;
         }
 
         // Fungsi load pesan
@@ -936,26 +947,19 @@
                 // Simpan posisi scroll sebelum memperbarui pesan
                 const wasScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 1;
                 
+                // Hapus semua pesan kecuali status upload
+                const uploadStatus = document.getElementById('uploadStatus');
                 chatMessages.innerHTML = '';
-                
-                // Tambahkan kembali indikator upload
-                const uploadIndicator = document.createElement('div');
-                uploadIndicator.className = 'upload-indicator';
-                uploadIndicator.id = 'uploadIndicator';
-                uploadIndicator.innerHTML = `
-                    <div>Mengunggah file...</div>
-                    <div class="progress-bar">
-                        <div class="progress" id="uploadProgress"></div>
-                    </div>
-                    <button class="upload-cancel" id="cancelUpload">Batalkan</button>
-                `;
-                chatMessages.appendChild(uploadIndicator);
-                document.getElementById('cancelUpload').addEventListener('click', cancelUpload);
-                document.getElementById('uploadIndicator').style.display = 'none';
+                if (uploadStatus) {
+                    chatMessages.appendChild(uploadStatus);
+                }
                 
                 if (!messages) return;
                 
-                Object.values(messages).forEach(message => {
+                // Urutkan pesan berdasarkan timestamp
+                const sortedMessages = Object.values(messages).sort((a, b) => a.timestamp - b.timestamp);
+                
+                sortedMessages.forEach(message => {
                     if (!message.deleted || (message.deleted && message.sender === currentUser)) {
                         displayMessage(message);
                     }
@@ -1000,6 +1004,10 @@
                         fileIcon = '🎵';
                     } else if (message.fileType.startsWith('video/')) {
                         fileIcon = '🎥';
+                    } else if (message.fileType.includes('pdf')) {
+                        fileIcon = '📕';
+                    } else if (message.fileType.includes('word') || message.fileType.includes('document')) {
+                        fileIcon = '📝';
                     }
                     
                     messageContent = `
@@ -1031,7 +1039,7 @@
                 
                 // Tambahkan tombol hapus untuk pesan yang dikirim oleh user saat ini
                 if (message.sender === currentUser) {
-                    messageContent += `<button class="delete-btn" onclick="deleteMessage('${message.id}')">Hapus</button>`;
+                    messageContent += `<button class="delete-btn" onclick="deleteMessage('${message.id}')">✕</button>`;
                 }
             }
             
@@ -1248,6 +1256,17 @@
             if (lastUsername) {
                 document.getElementById('quickLoginButton').style.display = 'block';
                 document.getElementById('lastUsername').textContent = lastUsername;
+            }
+
+            // Debug: Test koneksi Firebase Storage
+            console.log('Firebase Storage bucket:', firebaseConfig.storageBucket);
+            
+            // Test akses storage sederhana
+            try {
+                const testRef = storage.ref();
+                console.log('Storage initialized successfully');
+            } catch (error) {
+                console.error('Storage initialization error:', error);
             }
         });
     </script>
