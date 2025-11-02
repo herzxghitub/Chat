@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grup Chat Online</title>
     <style>
+        /* CSS yang sama seperti sebelumnya... */
+         <style>
         * {
             margin: 0;
             padding: 0;
@@ -546,6 +548,45 @@
                 max-width: 85%;
             }
         }
+   
+        /* Tambahan style untuk indikator upload */
+        .upload-indicator {
+            display: none;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .upload-cancel {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -582,10 +623,17 @@
 
             <div class="chat-messages" id="chatMessages">
                 <!-- Pesan akan ditampilkan di sini -->
+                <div class="upload-indicator" id="uploadIndicator">
+                    <div>Mengunggah file...</div>
+                    <div class="progress-bar">
+                        <div class="progress" id="uploadProgress"></div>
+                    </div>
+                    <button class="upload-cancel" id="cancelUpload">Batalkan</button>
+                </div>
             </div>
 
             <div class="chat-input">
-                <input type="file" id="fileInput" style="display: none;" accept="image/*, audio/*, video/*, .pdf, .doc, .docx .html, .text, .mpl, ">
+                <input type="file" id="fileInput" style="display: none;" accept="*/*">
                 <button class="file-upload-button" id="fileUploadButton">📎</button>
                 <input type="text" id="messageInput" placeholder="Ketik pesan...">
                 <button class="send-button" id="sendButton">➤</button>
@@ -661,6 +709,7 @@
         let currentUser = null;
         let isTaherUser = false;
         let bannedUsers = {};
+        let currentUploadTask = null;
 
         // Kata terlarang
         const forbiddenWords = ['Tuti', 'Udin', 'Haer', 'Tut', 'Adam'];
@@ -684,6 +733,7 @@
             document.getElementById('fileInput').click();
         });
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('cancelUpload').addEventListener('click', cancelUpload);
 
         // Quick login functionality
         document.getElementById('quickLoginButton').addEventListener('click', quickLogin);
@@ -812,42 +862,69 @@
             }
 
             // Tampilkan indikator upload
-            const messageInput = document.getElementById('messageInput');
-            messageInput.placeholder = 'Mengunggah file...';
-            messageInput.disabled = true;
-
+            document.getElementById('uploadIndicator').style.display = 'block';
+            document.getElementById('uploadProgress').style.width = '0%';
+            
             // Upload file ke Firebase Storage
             const storageRef = storage.ref();
             const fileRef = storageRef.child('chat_files/' + Date.now() + '_' + file.name);
             
-            fileRef.put(file).then((snapshot) => {
-                // Dapatkan URL file
-                return snapshot.ref.getDownloadURL();
-            }).then((downloadURL) => {
-                // Simpan pesan file ke Firebase
-                const messageData = {
-                    fileURL: downloadURL,
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    sender: currentUser,
-                    timestamp: Date.now(),
-                    id: generateMessageId(),
-                    type: 'file'
-                };
-                
-                messagesRef.push(messageData);
-                
-                // Reset input file dan input teks
-                document.getElementById('fileInput').value = '';
-                messageInput.placeholder = 'Ketik pesan...';
-                messageInput.disabled = false;
-            }).catch((error) => {
-                console.error('Error uploading file:', error);
-                alert('Gagal mengunggah file. Silakan coba lagi.');
-                messageInput.placeholder = 'Ketik pesan...';
-                messageInput.disabled = false;
-            });
+            // Mulai upload dengan progress tracking
+            currentUploadTask = fileRef.put(file);
+            
+            currentUploadTask.on('state_changed',
+                // Progress observer
+                (snapshot) => {
+                    // Update progress bar
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    document.getElementById('uploadProgress').style.width = progress + '%';
+                },
+                // Error observer
+                (error) => {
+                    console.error('Error uploading file:', error);
+                    alert('Gagal mengunggah file. Silakan coba lagi.');
+                    resetUploadIndicator();
+                },
+                // Complete observer
+                () => {
+                    // Dapatkan URL file
+                    currentUploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        // Simpan pesan file ke Firebase
+                        const messageData = {
+                            fileURL: downloadURL,
+                            fileName: file.name,
+                            fileType: file.type,
+                            fileSize: file.size,
+                            sender: currentUser,
+                            timestamp: Date.now(),
+                            id: generateMessageId(),
+                            type: 'file'
+                        };
+                        
+                        messagesRef.push(messageData);
+                        
+                        // Reset input file dan indikator
+                        document.getElementById('fileInput').value = '';
+                        resetUploadIndicator();
+                    });
+                }
+            );
+        }
+
+        // Fungsi batalkan upload
+        function cancelUpload() {
+            if (currentUploadTask) {
+                currentUploadTask.cancel();
+                resetUploadIndicator();
+                alert('Upload dibatalkan');
+            }
+        }
+
+        // Fungsi reset indikator upload
+        function resetUploadIndicator() {
+            document.getElementById('uploadIndicator').style.display = 'none';
+            document.getElementById('uploadProgress').style.width = '0%';
+            currentUploadTask = null;
         }
 
         // Fungsi load pesan
@@ -855,7 +932,26 @@
             messagesRef.on('value', snapshot => {
                 const messages = snapshot.val();
                 const chatMessages = document.getElementById('chatMessages');
+                
+                // Simpan posisi scroll sebelum memperbarui pesan
+                const wasScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 1;
+                
                 chatMessages.innerHTML = '';
+                
+                // Tambahkan kembali indikator upload
+                const uploadIndicator = document.createElement('div');
+                uploadIndicator.className = 'upload-indicator';
+                uploadIndicator.id = 'uploadIndicator';
+                uploadIndicator.innerHTML = `
+                    <div>Mengunggah file...</div>
+                    <div class="progress-bar">
+                        <div class="progress" id="uploadProgress"></div>
+                    </div>
+                    <button class="upload-cancel" id="cancelUpload">Batalkan</button>
+                `;
+                chatMessages.appendChild(uploadIndicator);
+                document.getElementById('cancelUpload').addEventListener('click', cancelUpload);
+                document.getElementById('uploadIndicator').style.display = 'none';
                 
                 if (!messages) return;
                 
@@ -865,8 +961,10 @@
                     }
                 });
                 
-                // Scroll ke bawah
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                // Scroll ke bawah jika sebelumnya sudah di paling bawah
+                if (wasScrolledToBottom) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
             });
         }
 
@@ -918,7 +1016,7 @@
                     
                     // Jika file adalah gambar, tampilkan preview
                     if (message.fileType.startsWith('image/')) {
-                        messageContent += `<img src="${message.fileURL}" alt="${message.fileName}" style="max-width: 100%; border-radius: 8px; margin-top: 5px;">`;
+                        messageContent += `<img src="${message.fileURL}" alt="${message.fileName}" style="max-width: 100%; border-radius: 8px; margin-top: 5px;" loading="lazy">`;
                     }
                     
                     messageContent += `<div class="time">${formatTime(message.timestamp)}</div>`;
